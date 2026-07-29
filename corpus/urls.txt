@@ -1,0 +1,11 @@
+# Real Phaser 3 documentation & guide pages indexed into the RAG corpus.
+https://docs.phaser.io/phaser/concepts/physics/arcade
+https://docs.phaser.io/phaser/concepts/physics/matter
+https://docs.phaser.io/api-documentation/class/tilemaps-tilemap
+https://docs.phaser.io/phaser/concepts/scenes
+https://docs.phaser.io/phaser/concepts/animations
+https://docs.phaser.io/phaser/concepts/input
+https://docs.phaser.io/phaser/concepts/cameras
+https://docs.phaser.io/phaser/concepts/gameobjects/sprite
+https://docs.phaser.io/phaser/concepts/loader
+https://docs.phaser.io/phaser/getting-started/making-your-first-phaser-game
