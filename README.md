@@ -18,6 +18,9 @@ layer.setCollisionByExclusion([-1]) … [1][2]
 
 ## Learn the vocabulary by reading the code
 
+> Deep dive: **[ARCHITECTURE.md](ARCHITECTURE.md)** — how every term cooperates
+> in one query, with sequence + dependency diagrams.
+
 This repo is deliberately organized so each agent concept lives in ONE small
 file with a `GLOSSARY` docstring explaining it in plain terms:
 
