@@ -9,3 +9,32 @@ https://docs.phaser.io/phaser/concepts/cameras
 https://docs.phaser.io/phaser/concepts/gameobjects/sprite
 https://docs.phaser.io/phaser/concepts/loader
 https://docs.phaser.io/phaser/getting-started/making-your-first-phaser-game
+
+# --- Multi-framework expansion (verified fetchable 2026-07-29) -------------
+# PixiJS (JS renderer)
+https://pixijs.com/8.x/guides/getting-started/intro
+# Excalibur (TypeScript engine)
+https://excaliburjs.com/docs/getting-started
+https://excaliburjs.com/docs/physics
+# Kaplay / ex-Kaboom (JS)
+https://kaplayjs.com/guides/starting/
+# Godot (GDScript/C#, editor engine with superb 2D)
+https://docs.godotengine.org/en/stable/getting_started/step_by_step/nodes_and_scenes.html
+https://docs.godotengine.org/en/stable/tutorials/physics/physics_introduction.html
+https://docs.godotengine.org/en/stable/tutorials/2d/using_tilemaps.html
+# Pygame (Python)
+https://www.pygame.org/docs/tut/PygameIntro.html
+# MonoGame (C#)
+https://docs.monogame.net/articles/getting_started/index.html
+# libGDX (Java)
+https://libgdx.com/wiki/start/a-simple-game
+# Ebitengine (Go)
+https://ebitengine.org/en/tour/hello_world.html
+https://ebitengine.org/en/documents/install.html
+# Bevy (Rust, ECS)
+https://bevy.org/learn/quick-start/getting-started/
+# raylib (C)
+https://www.raylib.com/cheatsheet/cheatsheet.html
+# NOTE: melonJS docs and deeper PixiJS pages are client-rendered SPAs (empty
+# HTML to a fetcher) and love2d.org's wiki blocks non-browser agents — indexed
+# via alternatives or skipped honestly.

@@ -115,7 +115,7 @@ class Copilot:
                     "only from general knowledge, clearly labeled as such."
                 )
             system = (
-                "You are a concise 2D game-development copilot (Phaser-focused). "
+                "You are a concise 2D game-development copilot (Phaser, PixiJS, Excalibur, Kaplay, Godot, Pygame, MonoGame, libGDX, Ebitengine, Bevy, raylib). "
                 "Ground every API claim in the provided excerpts with [n] citations."
             )
         elif label == "video":

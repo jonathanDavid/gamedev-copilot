@@ -28,7 +28,7 @@ _SYSTEM = (
 )
 
 _VIDEO_HINTS = re.compile(r"\b(video|tutorial|watch|youtube|walkthrough|course|paso a paso)\b", re.I)
-_DOCS_HINTS = re.compile(r"\b(how|what|why|api|method|function|error|collision|tilemap|sprite|physics|camera|scene|animation|c[oó]mo|qu[eé])\b", re.I)
+_DOCS_HINTS = re.compile(r"\b(how|what|why|api|method|function|error|collision|tilemap|sprite|physics|camera|scene|animation|phaser|pixi|excalibur|kaplay|godot|pygame|monogame|libgdx|ebiten|bevy|raylib|node|entity|ecs|c[oó]mo|qu[eé])\b", re.I)
 
 
 def heuristic_route(question: str) -> str:
