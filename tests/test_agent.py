@@ -147,3 +147,13 @@ def test_youtube_extract_parses_renderer_shape():
     }}]}
     vids = YouTubeSearch._extract(data)
     assert vids == [Video("Phaser Tilemap Guide", "https://www.youtube.com/watch?v=abc123", "Ourcade", "12:34")]
+
+
+def test_ask_streams_node_completions_in_order(retriever: Retriever):
+    llm = FakeLLM(["docs", "Grounded answer [1]."])
+    bot = make_bot(llm, retriever)
+    seen: list[str] = []
+    state = bot.ask("how do tilemap collisions work?", on_node=seen.append)
+    assert seen == ["route", "retrieve", "generate", "update_memory"]
+    assert state["answer"] == "Grounded answer [1]."
+    assert state["path"] == seen  # callback saw exactly the real path

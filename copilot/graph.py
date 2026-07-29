@@ -138,5 +138,23 @@ class Copilot:
 
     # ---- public API ------------------------------------------------------
 
-    def ask(self, question: str) -> AgentState:
-        return self._graph.invoke({"question": question, "path": []})
+    def ask(self, question: str, on_node=None) -> AgentState:
+        """Run one question through the graph.
+
+        `on_node`, if given, is called with each node's name as it COMPLETES —
+        LangGraph streams state after every node, which is what lets the CLI
+        show live progress instead of 60–90 s of silence during local
+        inference.
+        """
+        state: AgentState = {"question": question, "path": []}
+        if on_node is None:
+            return self._graph.invoke(state)
+        last: AgentState = state
+        seen = 0
+        for snapshot in self._graph.stream(state, stream_mode="values"):
+            last = snapshot
+            path = snapshot.get("path", [])
+            while seen < len(path):
+                on_node(path[seen])
+                seen += 1
+        return last
