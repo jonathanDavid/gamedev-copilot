@@ -45,7 +45,7 @@ def main() -> None:
         project=project,
     )
 
-    print("🎮 gamedev-copilot — ask about Phaser (Ctrl+C or /quit to exit)")
+    print("🎮 gamedev-copilot — Phaser · Godot · PixiJS · Ebitengine · Bevy + 7 more (/quit to exit)")
     if project.facts():
         print("   project memory:", "; ".join(project.facts()))
     while True:
