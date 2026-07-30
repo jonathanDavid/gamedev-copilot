@@ -177,6 +177,10 @@ def test_load_profile_reads_json_and_defaults_to_gamedev(tmp_path):
     assert prof.name == "FastAPI"
     assert prof.docs_keywords == ("pydantic",)
     assert prof.urls_file == "corpus/fastapi.txt"
+    # subjects must never share a vector store: unnamed index_dir derives
+    # from the subject name (the demo keeps the historical chroma_db)
+    assert prof.index_dir == "chroma_db_fastapi"
+    assert GAMEDEV.index_dir == "chroma_db"
 
 
 # ---------- youtube parser (offline, fixture data) --------------------------

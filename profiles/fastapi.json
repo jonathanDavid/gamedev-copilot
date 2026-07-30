@@ -6,5 +6,6 @@
     "fastapi", "pydantic", "dependency", "middleware", "router",
     "endpoint", "request", "response", "validation", "openapi", "uvicorn"
   ],
-  "urls_file": "profiles/fastapi-urls.txt"
+  "urls_file": "profiles/fastapi-urls.txt",
+  "index_dir": "chroma_db_fastapi"
 }

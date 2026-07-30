@@ -7,4 +7,4 @@ if errorlevel 1 (
   start "" /B "%OLLAMA%" serve
   timeout /t 4 /nobreak >NUL
 )
-.venv\Scripts\python -m copilot.chat
+.venv\Scripts\python -m copilot.chat %*

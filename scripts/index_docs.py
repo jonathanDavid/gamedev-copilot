@@ -37,13 +37,17 @@ def html_to_text(html: str) -> str:
 def main() -> None:
     if not ollama_available():
         sys.exit("Ollama is not running (needed for embeddings). Start it and retry.")
-    domain = load_profile()  # COPILOT_DOMAIN=profile.json indexes ANY subject's docs
+    # Same subject selection as the chat: positional profile path or
+    # COPILOT_DOMAIN. Each subject indexes into its own directory.
+    profile_arg = sys.argv[1] if len(sys.argv) > 1 else None
+    domain = load_profile(profile_arg)
+    print(f"indexing subject: {domain.name} → {domain.index_dir}/")
     urls = [
         u.strip()
         for u in (ROOT / domain.urls_file).read_text(encoding="utf-8").splitlines()
         if u.strip() and not u.startswith("#")
     ]
-    retriever = Retriever(OllamaEmbedder(), persist_dir=str(ROOT / "chroma_db"))
+    retriever = Retriever(OllamaEmbedder(), persist_dir=str(ROOT / domain.index_dir))
     total = 0
     for url in urls:
         try:

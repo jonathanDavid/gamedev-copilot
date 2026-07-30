@@ -74,15 +74,16 @@ a JSON profile + a URL list, and the same agent researches anything:
 
 ```powershell
 # index the FastAPI docs instead of game frameworks…
-$env:COPILOT_DOMAIN = "profiles/fastapi.json"
-.venv\Scripts\python scripts\index_docs.py
+.venv\Scripts\python scripts\index_docs.py profiles\fastapi.json
 # …and chat about them
-.venv\Scripts\python -m copilot.chat
+.\chat.bat profiles\fastapi.json          # or: ./chat.sh profiles/fastapi.json
 ```
 
-A profile is five fields — see [`profiles/fastapi.json`](profiles/fastapi.json):
-`name`, `banner`, `persona`, `docs_keywords`, `urls_file`. Without
-`COPILOT_DOMAIN` the game-dev demo profile applies.
+A profile is six fields — see [`profiles/fastapi.json`](profiles/fastapi.json):
+`name`, `banner`, `persona`, `docs_keywords`, `urls_file`, `index_dir`.
+Each subject keeps its **own vector index** (`index_dir`), so corpora never
+mix. `COPILOT_DOMAIN=profile.json` works too; with neither, the game-dev
+demo profile applies.
 
 > Expectations: docs answers take **60–90 s** — that's a 7B model doing real
 > inference on your CPU. Private and free is the trade.

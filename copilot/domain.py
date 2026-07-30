@@ -35,6 +35,9 @@ class DomainProfile:
     persona: str
     docs_keywords: tuple[str, ...] = ()
     urls_file: str = "corpus/urls.txt"
+    # Each subject gets its OWN vector store — otherwise indexing a second
+    # subject would silently mix corpora inside one Chroma collection.
+    index_dir: str = "chroma_db"
 
 
 GAMEDEV = DomainProfile(
@@ -60,4 +63,7 @@ def load_profile(path: str | None = None) -> DomainProfile:
         return GAMEDEV
     data = json.loads(Path(path).read_text(encoding="utf-8"))
     data["docs_keywords"] = tuple(data.get("docs_keywords", ()))
+    if "index_dir" not in data:
+        slug = "".join(c if c.isalnum() else "-" for c in data["name"].lower()).strip("-")
+        data["index_dir"] = f"chroma_db_{slug}"
     return DomainProfile(**data)

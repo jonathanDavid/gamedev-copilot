@@ -93,10 +93,15 @@ def main() -> None:
             "Ollama isn't running on http://localhost:11434.\n"
             "Install: https://ollama.com  ·  then: ollama pull mistral && ollama pull nomic-embed-text"
         )
-    domain = load_profile()  # COPILOT_DOMAIN=profile.json researches ANY subject
-    retriever = Retriever(OllamaEmbedder(), persist_dir=str(ROOT / "chroma_db"))
+    # The SUBJECT is chosen at launch, not typed in chat: pass a profile path
+    # (chat.sh profiles/fastapi.json) or set COPILOT_DOMAIN. No profile → the
+    # game-dev demo. Each subject keeps its own vector index.
+    profile_arg = sys.argv[1] if len(sys.argv) > 1 else None
+    domain = load_profile(profile_arg)
+    retriever = Retriever(OllamaEmbedder(), persist_dir=str(ROOT / domain.index_dir))
     if retriever.count() == 0:
-        print("⚠ docs index is empty — run scripts/index_docs.py first (docs questions will degrade).")
+        print(f"⚠ the '{domain.name}' docs index is empty — run scripts/index_docs.py "
+              "with the same profile first (docs questions will degrade).")
 
     project = ProjectMemory(ROOT / "project_memory.json")
     bot = Copilot(
@@ -110,6 +115,8 @@ def main() -> None:
     )
 
     print(domain.banner)
+    print(f"   subject: {domain.name} — switch with `chat profiles/<name>.json` "
+          "(see profiles/fastapi.json) or COPILOT_DOMAIN")
     if project.facts():
         print("   project memory:", "; ".join(project.facts()))
     while True:
