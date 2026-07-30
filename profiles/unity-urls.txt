@@ -1,0 +1,14 @@
+# Unity 3D corpus — real Unity Manual pages.
+# Index:  python scripts/index_docs.py profiles/unity.json
+https://docs.unity3d.com/Manual/GameObjects.html
+https://docs.unity3d.com/Manual/UsingComponents.html
+https://docs.unity3d.com/Manual/class-Transform.html
+https://docs.unity3d.com/Manual/Prefabs.html
+https://docs.unity3d.com/Manual/CreatingAndUsingScripts.html
+https://docs.unity3d.com/Manual/ExecutionOrder.html
+https://docs.unity3d.com/Manual/RigidbodiesOverview.html
+https://docs.unity3d.com/Manual/CollidersOverview.html
+https://docs.unity3d.com/Manual/CamerasOverview.html
+https://docs.unity3d.com/Manual/Coroutines.html
+https://docs.unity3d.com/Manual/class-ScriptableObject.html
+https://docs.unity3d.com/Manual/instantiating-prefabs.html

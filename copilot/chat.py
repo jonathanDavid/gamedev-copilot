@@ -20,11 +20,12 @@ import threading
 import time
 from pathlib import Path
 
-from copilot.domain import load_profile
+from copilot.domain import GAMEDEV, load_profile
 from copilot.graph import Copilot
 from copilot.llm.ollama_client import OllamaEmbedder, OllamaLLM, ollama_available
 from copilot.memory.memory import ConversationBuffer, ProjectMemory
 from copilot.rag.store import Retriever
+from copilot.subject import ensure_subject, extract_subject_request
 from copilot.tools.youtube import YouTubeSearch
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -88,35 +89,60 @@ class Spinner:
 
 
 def main() -> None:
+    # Piped/redirected stdout on Windows defaults to cp1252, which cannot
+    # encode the banner emoji — never crash over a glyph.
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     if not ollama_available():
         raise SystemExit(
             "Ollama isn't running on http://localhost:11434.\n"
             "Install: https://ollama.com  ·  then: ollama pull mistral && ollama pull nomic-embed-text"
         )
-    # The SUBJECT is chosen at launch, not typed in chat: pass a profile path
-    # (chat.sh profiles/fastapi.json) or set COPILOT_DOMAIN. No profile → the
-    # game-dev demo. Each subject keeps its own vector index.
-    profile_arg = sys.argv[1] if len(sys.argv) > 1 else None
-    domain = load_profile(profile_arg)
-    retriever = Retriever(OllamaEmbedder(), persist_dir=str(ROOT / domain.index_dir))
-    if retriever.count() == 0:
-        print(f"⚠ the '{domain.name}' docs index is empty — run scripts/index_docs.py "
-              "with the same profile first (docs questions will degrade).")
-
     project = ProjectMemory(ROOT / "project_memory.json")
-    bot = Copilot(
-        llm=OllamaLLM(),
-        embedder=OllamaEmbedder(),
-        retriever=retriever,
-        video_search=YouTubeSearch(),
-        buffer=ConversationBuffer(max_turns=8),
-        project=project,
-        domain=domain,
-    )
+
+    def build_bot(domain):
+        retriever = Retriever(OllamaEmbedder(), persist_dir=str(ROOT / domain.index_dir))
+        if retriever.count() == 0:
+            print(f"⚠ the '{domain.name}' docs index is empty — docs questions will degrade.")
+        return Copilot(
+            llm=OllamaLLM(),
+            embedder=OllamaEmbedder(),
+            retriever=retriever,
+            video_search=YouTubeSearch(),
+            buffer=ConversationBuffer(max_turns=8),
+            project=project,
+            domain=domain,
+        )
+
+    def become_expert(subject: str):
+        """Discover + index the subject's docs on the web, then reskin."""
+        report = ensure_subject(subject, ROOT, OllamaEmbedder())
+        if report.created:
+            print(f"✓ now an expert on {report.profile.name} — indexed {report.chunks} chunks "
+                  f"from {report.pages} pages at {report.root}")
+        else:
+            print(f"✓ switched to existing subject: {report.profile.name}")
+        return build_bot(report.profile)
+
+    # The SUBJECT: a profile path argument / COPILOT_DOMAIN wins; otherwise
+    # the chat ASKS — type anything ("Unity 3D", "Rust") and an agent finds
+    # and indexes the docs from the internet. Enter keeps the demo subject.
+    profile_arg = sys.argv[1] if len(sys.argv) > 1 else None
+    if profile_arg or not sys.stdin.isatty():
+        domain = load_profile(profile_arg)
+        bot = build_bot(domain)
+    else:
+        answer = input("What should I be an expert on? (Enter = 2D game development demo) ").strip()
+        if answer:
+            bot = become_expert(answer)
+            domain = bot.domain
+        else:
+            domain = GAMEDEV
+            bot = build_bot(domain)
 
     print(domain.banner)
-    print(f"   subject: {domain.name} — switch with `chat profiles/<name>.json` "
-          "(see profiles/fastapi.json) or COPILOT_DOMAIN")
+    print("   switch anytime: say \"I want you to be an expert in <subject>\" "
+          "or /subject <subject>")
     if project.facts():
         print("   project memory:", "; ".join(project.facts()))
     while True:
@@ -140,13 +166,27 @@ def main() -> None:
             removed = project.forget(int(q.split()[1]))
             print(f"forgot: {removed}" if removed else "no such fact")
             continue
+        if q.startswith("/subject "):
+            bot = become_expert(q[len("/subject "):].strip())
+            continue
+        # "I want you to be an expert in X …" — switch subjects mid-chat
+        subject_request = extract_subject_request(q)
+        if subject_request:
+            bot = become_expert(subject_request)
+            print("   ask your question again — it will be answered from the new corpus.")
+            continue
 
-        spinner = Spinner()
-        spinner.start()
-        try:
-            state = bot.ask(q, on_node=spinner.bump)
-        finally:
-            elapsed = spinner.stop()
+        if sys.stdout.isatty():
+            spinner = Spinner()
+            spinner.start()
+            try:
+                state = bot.ask(q, on_node=spinner.bump)
+            finally:
+                elapsed = spinner.stop()
+        else:  # piped/scripted runs: no spinner control characters in output
+            t0 = time.time()
+            state = bot.ask(q)
+            elapsed = time.time() - t0
         print(f"\n[path: {' → '.join(state['path'])}]  [label: {state['label']}]  [{elapsed:.0f}s]")
         for i, h in enumerate(state.get("hits", []) or []):
             print(f"  [{i+1}] {h.source}  (score {h.score:.2f})")

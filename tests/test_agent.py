@@ -145,6 +145,23 @@ def test_docs_path_with_empty_index_admits_it(tmp_path):
     assert "No documentation matched" in llm.calls[-1]["prompt"]
 
 
+def test_weak_retrieval_demands_an_admission(retriever: Retriever):
+    """Asking about a topic the index doesn't cover (all scores low) must
+    inject the off-topic warning; a strong match must not. The hash embedder
+    scores on a different scale than the real one, so the threshold is set
+    between this fixture's off-corpus (~0.0) and in-corpus (~0.3) scores."""
+    llm = FakeLLM(["docs", "The indexed documentation does not cover this topic."])
+    bot = Copilot(llm=llm, embedder=HashEmbedder(), retriever=retriever,
+                  video_search=FakeVideoSearch(), low_relevance=0.2)
+    bot.ask("qualities of the Unity editor inspector panel maybe")  # off-corpus
+    assert "WARNING: every excerpt above matched this question only weakly" in llm.calls[-1]["prompt"]
+    llm2 = FakeLLM(["docs", "Use setCollision [1]."])
+    bot2 = Copilot(llm=llm2, embedder=HashEmbedder(), retriever=retriever,
+                   video_search=FakeVideoSearch(), low_relevance=0.2)
+    bot2.ask("how do I set collision on a tilemap layer?")  # in-corpus
+    assert "WARNING: every excerpt above matched" not in llm2.calls[-1]["prompt"]
+
+
 # ---------- domain profiles: the same graph researches ANY subject ----------
 
 def test_custom_domain_profile_reskins_every_prompt(retriever: Retriever):
@@ -181,6 +198,69 @@ def test_load_profile_reads_json_and_defaults_to_gamedev(tmp_path):
     # from the subject name (the demo keeps the historical chroma_db)
     assert prof.index_dir == "chroma_db_fastapi"
     assert GAMEDEV.index_dir == "chroma_db"
+
+
+# ---------- web docs discovery: subject → indexed corpus, no network --------
+
+DDG_FIXTURE = """
+<a class="result__a" href="//duckduckgo.com/l/?uddg=https%3A%2F%2Fwww.reddit.com%2Fr%2Funity%2F&rut=x">r/unity</a>
+<a class="result__a" href="//duckduckgo.com/l/?uddg=https%3A%2F%2Fdocs.unity3d.com%2FManual%2Findex.html&rut=y">Unity Manual</a>
+<a class="result__a" href="//duckduckgo.com/l/?uddg=https%3A%2F%2Fwww.youtube.com%2Fwatch%3Fv%3Dabc&rut=z">Video</a>
+"""
+
+ROOT_FIXTURE = """
+<a href="/Manual/GameObjects.html">GameObjects</a>
+<a href="/Manual/Prefabs.html">Prefabs</a>
+<a href="https://docs.unity3d.com/Manual/logo.png">logo</a>
+<a href="https://forum.unity.com/thread">forum</a>
+<a href="/Manual/GameObjects.html">dup</a>
+"""
+
+
+def fake_web(url: str) -> str:
+    if "duckduckgo" in url:
+        return DDG_FIXTURE
+    if url.endswith("index.html"):
+        return ROOT_FIXTURE
+    return "<p>" + ("GameObjects are containers for components in scenes. " * 30) + "</p>"
+
+
+def test_discovery_picks_official_docs_and_crawls_same_host():
+    from copilot.tools.webdocs import crawl_docs, pick_docs_root, search_docs_urls
+    results = search_docs_urls("unity 3d", fake_web)
+    assert "https://docs.unity3d.com/Manual/index.html" in results
+    root = pick_docs_root(results, "unity 3d")
+    assert root == "https://docs.unity3d.com/Manual/index.html"  # beats reddit/youtube
+    pages = crawl_docs(root, fake_web, max_pages=10)
+    assert pages[0] == root
+    assert "https://docs.unity3d.com/Manual/GameObjects.html" in pages
+    assert all("forum.unity.com" not in p and ".png" not in p for p in pages)
+    assert len(pages) == len(set(pages))
+
+
+def test_expert_phrases_extract_the_subject():
+    from copilot.subject import extract_subject_request
+    assert extract_subject_request(
+        "i want you to be an expert on unity 3D then answer me what a gameobject its"
+    ) == "unity 3D"
+    assert extract_subject_request("be an expert in Rust, please") == "Rust"
+    assert extract_subject_request("quiero que seas experto en Neo4j") == "Neo4j"
+    assert extract_subject_request("how do tilemap collisions work?") is None
+
+
+def test_ensure_subject_discovers_indexes_and_reuses(tmp_path):
+    from copilot.subject import ensure_subject
+    logs: list[str] = []
+    r1 = ensure_subject("unity 3d", tmp_path, HashEmbedder(), fetch=fake_web, log=logs.append)
+    assert r1.created and r1.pages >= 2 and r1.chunks > 0
+    assert (tmp_path / "profiles" / "unity-3d.json").exists()
+    assert (tmp_path / "profiles" / "unity-3d-urls.txt").exists()
+    assert r1.profile.persona == "a concise unity 3d research copilot"
+    assert "unity" in r1.profile.docs_keywords
+    # second call: reuse, no re-crawl
+    r2 = ensure_subject("unity 3d", tmp_path, HashEmbedder(), fetch=fake_web, log=logs.append)
+    assert not r2.created
+    assert r2.profile.index_dir == r1.profile.index_dir
 
 
 # ---------- youtube parser (offline, fixture data) --------------------------

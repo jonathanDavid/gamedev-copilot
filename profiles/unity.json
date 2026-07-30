@@ -1,0 +1,12 @@
+{
+  "name": "Unity 3D",
+  "banner": "🎯 research-copilot · Unity 3D (/quit to exit)",
+  "persona": "a concise Unity 3D research copilot",
+  "docs_keywords": [
+    "unity", "gameobject", "monobehaviour", "prefab", "transform",
+    "rigidbody", "collider", "scene", "component", "inspector",
+    "coroutine", "scriptableobject", "raycast", "instantiate"
+  ],
+  "urls_file": "profiles/unity-urls.txt",
+  "index_dir": "chroma_db_unity"
+}

@@ -3,3 +3,4 @@ __pycache__/
 chroma_db/
 project_memory.json
 *.pyc
+chroma_db_*/

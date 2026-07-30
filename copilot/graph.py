@@ -49,6 +49,12 @@ class Copilot:
     # the same graph researches any topic (see copilot/domain.py).
     domain: DomainProfile = field(default_factory=lambda: GAMEDEV)
 
+    # Cosine score below which retrieval is treated as off-topic. Calibrated
+    # for the REAL embedder (nomic-embed-text): in-corpus questions score
+    # ~0.66-0.75, out-of-domain ones ~0.60-0.62. The hash embedder used in
+    # tests has a different scale — tests pass their own threshold.
+    low_relevance: float = 0.65
+
     def __post_init__(self) -> None:
         g = StateGraph(AgentState)
         g.add_node("route", self._route)
@@ -113,6 +119,17 @@ class Copilot:
                     "Documentation excerpts (answer FROM these; cite like [1]; "
                     "if they don't cover it, say so honestly rather than inventing APIs):\n" + ctx
                 )
+                # Weak retrieval = the index probably doesn't cover the topic
+                # (e.g. asking a game-dev index about Unity). A 7B left alone
+                # will summarize the wrong excerpts instead of admitting it —
+                # measured live — so the admission gets demanded explicitly.
+                if max(h.score for h in hits) < self.low_relevance:
+                    parts.append(
+                        "WARNING: every excerpt above matched this question only weakly. "
+                        "If they do not actually answer it, START your reply by saying the "
+                        "indexed documentation does not cover this topic — do not summarize "
+                        "unrelated excerpts."
+                    )
             else:
                 parts.append(
                     "No documentation matched. Say the docs index has no coverage and answer "

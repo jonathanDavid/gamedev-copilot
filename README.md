@@ -45,7 +45,7 @@ python -m venv .venv
 .venv\Scripts\pip install -r requirements.txt
 
 # 4. Prove the architecture works BEFORE any model exists (hermetic tests)
-.venv\Scripts\python -m pytest        # 16 passed, ~4s — no Ollama needed
+.venv\Scripts\python -m pytest        # 20 passed, ~4s — no Ollama needed
 
 # 5. The local models (~4.7 GB total, one-time download)
 ollama pull mistral                    # the 7B chat model
@@ -65,25 +65,42 @@ Inside the REPL: `/remember <fact>` · `/facts` · `/forget <n>` · `/quit`.
 Linux/macOS is the same story: install git/python3/ollama with your package
 manager, use `.venv/bin/` instead of `.venv\Scripts\`.
 
-### Point it at YOUR subject
+### Just tell it the subject
+
+Launch with no arguments and the chat asks:
+
+```
+What should I be an expert on? (Enter = 2D game development demo) Svelte
+  searching the web for 'Svelte' documentation…
+  official-looking docs: https://svelte.dev/docs
+  crawled 12 pages — writing profile + indexing
+✓ now an expert on Svelte — indexed 22 chunks from 12 pages
+```
+
+Or switch mid-conversation — `I want you to be an expert in Rust` (also
+Spanish: `quiero que seas experto en …`) or `/subject Rust`. An agent
+searches the web (key-less DuckDuckGo scrape, same philosophy as the
+YouTube tool), picks the site that looks like official documentation,
+crawls a bounded set of same-host pages, writes the profile, and indexes —
+then your questions are answered from that corpus, with citations.
+
+### Or hand-curate a profile
 
 Everything subject-specific lives in one `DomainProfile`
-([`copilot/domain.py`](copilot/domain.py)): the persona in the prompts, the
-CLI banner, the router's keyword fallback, and which docs get indexed. Write
-a JSON profile + a URL list, and the same agent researches anything:
+([`copilot/domain.py`](copilot/domain.py)) — six JSON fields (see
+[`profiles/fastapi.json`](profiles/fastapi.json)): `name`, `banner`,
+`persona`, `docs_keywords`, `urls_file`, `index_dir`. Index and chat with
+it explicitly:
 
 ```powershell
-# index the FastAPI docs instead of game frameworks…
 .venv\Scripts\python scripts\index_docs.py profiles\fastapi.json
-# …and chat about them
 .\chat.bat profiles\fastapi.json          # or: ./chat.sh profiles/fastapi.json
 ```
 
-A profile is six fields — see [`profiles/fastapi.json`](profiles/fastapi.json):
-`name`, `banner`, `persona`, `docs_keywords`, `urls_file`, `index_dir`.
 Each subject keeps its **own vector index** (`index_dir`), so corpora never
 mix. `COPILOT_DOMAIN=profile.json` works too; with neither, the game-dev
-demo profile applies.
+demo profile applies. Auto-discovered subjects write these same files — a
+discovery run is just a curated profile you didn't have to type.
 
 > Expectations: docs answers take **60–90 s** — that's a 7B model doing real
 > inference on your CPU. Private and free is the trade.
@@ -281,12 +298,15 @@ memory only. Same conductor, three routes, one visible path.
 | `YouTubeSearch` (live scrape) | `FakeVideoSearch` — canned videos, records queries |
 | Persistent Chroma | Ephemeral Chroma (unique per-test collections) |
 
-**16 hermetic tests run the entire graph in seconds with zero network and
+**20 hermetic tests run the entire graph in seconds with zero network and
 zero models** — asserting the path taken, the *grounding* (retrieved chunk
 text really appears inside the recorded generate prompt), memory injection
 and persistence, router salvage of messy output, the YouTube parser against
-fixture data, and that a custom DomainProfile reskins every prompt (an
-astronomy profile produces an astronomy copilot, no game-dev residue). Swapping fakes→Ollama changes the words, never the
+fixture data, that a custom DomainProfile reskins every prompt (an
+astronomy profile produces an astronomy copilot, no game-dev residue), and
+that weakly-matching retrieval injects an explicit admit-the-gap demand
+(measured live: a 7B otherwise summarizes the wrong docs instead of
+saying the index doesn't cover the topic). Swapping fakes→Ollama changes the words, never the
 wiring — which is the whole point of putting the seam where it is.
 
 ---
