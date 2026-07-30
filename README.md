@@ -37,8 +37,8 @@ winget install Ollama.Ollama
 # → close and reopen the terminal so PATH updates
 
 # 2. Get the code
-git clone https://github.com/jonathanDavid/gamedev-copilot.git
-cd gamedev-copilot
+git clone https://github.com/jonathanDavid/research-copilot.git
+cd research-copilot
 
 # 3. Python environment + dependencies
 python -m venv .venv
