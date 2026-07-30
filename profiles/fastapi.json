@@ -1,0 +1,10 @@
+{
+  "name": "FastAPI",
+  "banner": "🔬 research-copilot · FastAPI (/quit to exit)",
+  "persona": "a concise FastAPI research copilot",
+  "docs_keywords": [
+    "fastapi", "pydantic", "dependency", "middleware", "router",
+    "endpoint", "request", "response", "validation", "openapi", "uvicorn"
+  ],
+  "urls_file": "profiles/fastapi-urls.txt"
+}

@@ -18,6 +18,7 @@ from typing import TypedDict
 
 from langgraph.graph import END, StateGraph
 
+from copilot.domain import GAMEDEV, DomainProfile
 from copilot.llm.base import LLM, Embedder
 from copilot.memory.memory import ConversationBuffer, ProjectMemory
 from copilot.nodes import router as router_node
@@ -44,6 +45,9 @@ class Copilot:
     video_search: VideoSearch
     buffer: ConversationBuffer = field(default_factory=ConversationBuffer)
     project: ProjectMemory | None = None
+    # The subject is CONFIGURATION, not architecture — swap this profile and
+    # the same graph researches any topic (see copilot/domain.py).
+    domain: DomainProfile = field(default_factory=lambda: GAMEDEV)
 
     def __post_init__(self) -> None:
         g = StateGraph(AgentState)
@@ -68,7 +72,7 @@ class Copilot:
     # ---- nodes ----------------------------------------------------------
 
     def _route(self, state: AgentState) -> AgentState:
-        label = router_node.route(self.llm, state["question"])
+        label = router_node.route(self.llm, state["question"], self.domain.docs_keywords)
         return {"label": label, "path": state.get("path", []) + ["route"]}
 
     def _retrieve(self, state: AgentState) -> AgentState:
@@ -115,7 +119,7 @@ class Copilot:
                     "only from general knowledge, clearly labeled as such."
                 )
             system = (
-                "You are a concise 2D game-development copilot (Phaser, PixiJS, Excalibur, Kaplay, Godot, Pygame, MonoGame, libGDX, Ebitengine, Bevy, raylib). "
+                f"You are {self.domain.persona}. "
                 "Ground every API claim in the provided excerpts with [n] citations."
             )
         elif label == "video":
@@ -124,14 +128,14 @@ class Copilot:
                 vlist = "\n".join(f"- {v.title} — {v.channel} ({v.duration}) {v.url}" for v in videos)
                 parts.append(f"Tutorial videos found:\n{vlist}")
                 system = (
-                    "You are a 2D game-development copilot. Recommend the most relevant of the "
+                    f"You are {self.domain.persona}. Recommend the most relevant of the "
                     "found videos (with their URLs) and say in one line what each covers."
                 )
             else:
                 parts.append("The video search returned nothing.")
-                system = "You are a 2D game-development copilot. Apologize that no videos were found and answer briefly yourself."
+                system = f"You are {self.domain.persona}. Apologize that no videos were found and answer briefly yourself."
         else:
-            system = "You are a friendly, concise 2D game-development copilot."
+            system = f"You are {self.domain.persona}. Be friendly and concise."
 
         parts.append(f"User question: {state['question']}")
         return system, "\n\n".join(parts)

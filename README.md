@@ -1,10 +1,16 @@
-# 🎮 gamedev-copilot
+# 🔬 research-copilot
 
-**A 2D game-dev research copilot** — ask it questions about Phaser, Godot,
-PixiJS, Ebitengine, Bevy and 7 more frameworks, and a LangGraph agent decides
+**A local research copilot for ANY subject** — a LangGraph agent that decides
 whether to answer from indexed docs (RAG), find you a tutorial video, or just
 chat — with **every LLM call running locally** (Ollama + Mistral) and every
 architectural concept mapped to one readable file.
+
+The subject is **configuration, not architecture**: a small JSON profile
+(persona, router keywords, docs corpus) points the same graph at anything.
+The shipped demo profile is **2D game development** — 12 frameworks indexed
+(Phaser, Godot, PixiJS, Ebitengine, Bevy + 7 more) — and
+[`profiles/fastapi.json`](profiles/fastapi.json) shows a second subject
+ready to index.
 
 ```
 you> How do I make my player collide with a tilemap layer?
@@ -39,7 +45,7 @@ python -m venv .venv
 .venv\Scripts\pip install -r requirements.txt
 
 # 4. Prove the architecture works BEFORE any model exists (hermetic tests)
-.venv\Scripts\python -m pytest        # 12 passed, ~1s — no Ollama needed
+.venv\Scripts\python -m pytest        # 16 passed, ~4s — no Ollama needed
 
 # 5. The local models (~4.7 GB total, one-time download)
 ollama pull mistral                    # the 7B chat model
@@ -59,6 +65,25 @@ Inside the REPL: `/remember <fact>` · `/facts` · `/forget <n>` · `/quit`.
 Linux/macOS is the same story: install git/python3/ollama with your package
 manager, use `.venv/bin/` instead of `.venv\Scripts\`.
 
+### Point it at YOUR subject
+
+Everything subject-specific lives in one `DomainProfile`
+([`copilot/domain.py`](copilot/domain.py)): the persona in the prompts, the
+CLI banner, the router's keyword fallback, and which docs get indexed. Write
+a JSON profile + a URL list, and the same agent researches anything:
+
+```powershell
+# index the FastAPI docs instead of game frameworks…
+$env:COPILOT_DOMAIN = "profiles/fastapi.json"
+.venv\Scripts\python scripts\index_docs.py
+# …and chat about them
+.venv\Scripts\python -m copilot.chat
+```
+
+A profile is five fields — see [`profiles/fastapi.json`](profiles/fastapi.json):
+`name`, `banner`, `persona`, `docs_keywords`, `urls_file`. Without
+`COPILOT_DOMAIN` the game-dev demo profile applies.
+
 > Expectations: docs answers take **60–90 s** — that's a 7B model doing real
 > inference on your CPU. Private and free is the trade.
 
@@ -70,6 +95,7 @@ Each agent concept lives in ONE small file with a `GLOSSARY` docstring:
 
 | Term | What it means (short) | Read this file |
 |---|---|---|
+| **Domain profile** | the ONE place a subject lives — persona, keywords, corpus; swap it and the agent researches anything | [`copilot/domain.py`](copilot/domain.py) |
 | **Router node** | classification only: `docs` / `video` / `chat`, graph branches on it | [`copilot/nodes/router.py`](copilot/nodes/router.py) |
 | **Indexing** | one-time prep: split + store docs before any question | [`scripts/index_docs.py`](scripts/index_docs.py) |
 | **Chunks** | ~400-word passages — models retrieve better over small focused pieces | [`copilot/rag/chunking.py`](copilot/rag/chunking.py) |
@@ -97,6 +123,7 @@ Suggested reading order: `router.py` → `chunking.py` → `store.py` →
 |---|---|---|
 | `copilot/chat.py` | CLI: wires everything, prints path/citations | graph, llm, rag, tools, memory |
 | `copilot/graph.py` | **The conductor** — LangGraph nodes/edges, prompt assembly | langgraph, all components below |
+| `copilot/domain.py` | the subject as data: persona, keywords, corpus, banner | nothing (pure) |
 | `copilot/nodes/router.py` | classify question → `docs` / `video` / `chat` | llm/base only |
 | `copilot/rag/chunking.py` | split docs into overlapping ~400-word chunks | nothing (pure) |
 | `copilot/rag/store.py` | Chroma vector DB + Retriever (embed → nearest chunks) | chromadb, llm/base, chunking |
@@ -253,11 +280,12 @@ memory only. Same conductor, three routes, one visible path.
 | `YouTubeSearch` (live scrape) | `FakeVideoSearch` — canned videos, records queries |
 | Persistent Chroma | Ephemeral Chroma (unique per-test collections) |
 
-**12 hermetic tests run the entire graph in ~1 second with zero network and
+**16 hermetic tests run the entire graph in seconds with zero network and
 zero models** — asserting the path taken, the *grounding* (retrieved chunk
 text really appears inside the recorded generate prompt), memory injection
-and persistence, router salvage of messy output, and the YouTube parser
-against fixture data. Swapping fakes→Ollama changes the words, never the
+and persistence, router salvage of messy output, the YouTube parser against
+fixture data, and that a custom DomainProfile reskins every prompt (an
+astronomy profile produces an astronomy copilot, no game-dev residue). Swapping fakes→Ollama changes the words, never the
 wiring — which is the whole point of putting the seam where it is.
 
 ---

@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import pytest
 
+from copilot.domain import GAMEDEV, DomainProfile, load_profile
 from copilot.graph import Copilot
 from copilot.llm.fakes import FakeLLM, HashEmbedder
 from copilot.memory.memory import ConversationBuffer, ProjectMemory
@@ -29,6 +30,14 @@ def test_router_falls_back_to_heuristic_on_garbage():
     assert route(FakeLLM(["banana"]), "show me a tutorial video for tilemaps") == "video"
     assert route(FakeLLM(["???"]), "how does arcade physics gravity work") == "docs"
     assert heuristic_route("hola!") == "chat"
+
+
+def test_router_heuristic_uses_domain_keywords():
+    """Subject words are DomainProfile config, not hardcoded vocabulary."""
+    assert heuristic_route("tilemap collisions again", GAMEDEV.docs_keywords) == "docs"
+    astro = ("telescope", "nebula", "aperture")
+    assert heuristic_route("best aperture for nebula shots", astro) == "docs"
+    assert heuristic_route("best aperture for nebula shots") == "chat"  # no profile → no match
 
 
 # ---------- chunking --------------------------------------------------------
@@ -134,6 +143,40 @@ def test_docs_path_with_empty_index_admits_it(tmp_path):
     state = bot.ask("how do tweens work?")
     assert state["path"] == ["route", "retrieve", "generate", "update_memory"]
     assert "No documentation matched" in llm.calls[-1]["prompt"]
+
+
+# ---------- domain profiles: the same graph researches ANY subject ----------
+
+def test_custom_domain_profile_reskins_every_prompt(retriever: Retriever):
+    astronomy = DomainProfile(
+        name="astronomy",
+        banner="🔭 research-copilot · astronomy",
+        persona="a concise astronomy research copilot",
+        docs_keywords=("telescope", "nebula"),
+    )
+    llm = FakeLLM(["docs", "Dust and ionized gases [1]."])
+    bot = Copilot(
+        llm=llm, embedder=HashEmbedder(), retriever=retriever,
+        video_search=FakeVideoSearch(), domain=astronomy,
+    )
+    state = bot.ask("what is a nebula made of?")
+    assert state["path"] == ["route", "retrieve", "generate", "update_memory"]
+    assert "astronomy research copilot" in llm.calls[-1]["system"]
+    assert "game" not in llm.calls[-1]["system"].lower()
+
+
+def test_load_profile_reads_json_and_defaults_to_gamedev(tmp_path):
+    assert load_profile(None) == GAMEDEV
+    p = tmp_path / "fastapi.json"
+    p.write_text(
+        '{"name": "FastAPI", "banner": "b", "persona": "a concise FastAPI research copilot",'
+        ' "docs_keywords": ["pydantic"], "urls_file": "corpus/fastapi.txt"}',
+        encoding="utf-8",
+    )
+    prof = load_profile(str(p))
+    assert prof.name == "FastAPI"
+    assert prof.docs_keywords == ("pydantic",)
+    assert prof.urls_file == "corpus/fastapi.txt"
 
 
 # ---------- youtube parser (offline, fixture data) --------------------------

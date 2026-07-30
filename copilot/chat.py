@@ -20,6 +20,7 @@ import threading
 import time
 from pathlib import Path
 
+from copilot.domain import load_profile
 from copilot.graph import Copilot
 from copilot.llm.ollama_client import OllamaEmbedder, OllamaLLM, ollama_available
 from copilot.memory.memory import ConversationBuffer, ProjectMemory
@@ -92,6 +93,7 @@ def main() -> None:
             "Ollama isn't running on http://localhost:11434.\n"
             "Install: https://ollama.com  ·  then: ollama pull mistral && ollama pull nomic-embed-text"
         )
+    domain = load_profile()  # COPILOT_DOMAIN=profile.json researches ANY subject
     retriever = Retriever(OllamaEmbedder(), persist_dir=str(ROOT / "chroma_db"))
     if retriever.count() == 0:
         print("⚠ docs index is empty — run scripts/index_docs.py first (docs questions will degrade).")
@@ -104,9 +106,10 @@ def main() -> None:
         video_search=YouTubeSearch(),
         buffer=ConversationBuffer(max_turns=8),
         project=project,
+        domain=domain,
     )
 
-    print("🎮 gamedev-copilot — Phaser · Godot · PixiJS · Ebitengine · Bevy + 7 more (/quit to exit)")
+    print(domain.banner)
     if project.facts():
         print("   project memory:", "; ".join(project.facts()))
     while True:

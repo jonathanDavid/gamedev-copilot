@@ -16,6 +16,7 @@ import httpx
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
+from copilot.domain import load_profile  # noqa: E402
 from copilot.llm.ollama_client import OllamaEmbedder, ollama_available  # noqa: E402
 from copilot.rag.chunking import chunk_text  # noqa: E402
 from copilot.rag.store import Retriever  # noqa: E402
@@ -36,16 +37,17 @@ def html_to_text(html: str) -> str:
 def main() -> None:
     if not ollama_available():
         sys.exit("Ollama is not running (needed for embeddings). Start it and retry.")
+    domain = load_profile()  # COPILOT_DOMAIN=profile.json indexes ANY subject's docs
     urls = [
         u.strip()
-        for u in (ROOT / "corpus" / "urls.txt").read_text(encoding="utf-8").splitlines()
+        for u in (ROOT / domain.urls_file).read_text(encoding="utf-8").splitlines()
         if u.strip() and not u.startswith("#")
     ]
     retriever = Retriever(OllamaEmbedder(), persist_dir=str(ROOT / "chroma_db"))
     total = 0
     for url in urls:
         try:
-            r = httpx.get(url, timeout=30.0, follow_redirects=True, headers={"User-Agent": "gamedev-copilot-indexer/1.0"})
+            r = httpx.get(url, timeout=30.0, follow_redirects=True, headers={"User-Agent": "research-copilot-indexer/1.0"})
             r.raise_for_status()
         except Exception as e:  # noqa: BLE001
             print(f"  skip {url} ({e})")

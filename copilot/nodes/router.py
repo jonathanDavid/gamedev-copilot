@@ -19,7 +19,7 @@ from copilot.llm.base import LLM
 LABELS = ("docs", "video", "chat")
 
 _SYSTEM = (
-    "You are a router for a game-development copilot. Classify the user's "
+    "You are a router for a research copilot. Classify the user's "
     "message into exactly one word:\n"
     "docs  — a technical how/what/why question answerable from API docs or guides\n"
     "video — the user wants a tutorial, walkthrough, or something to watch\n"
@@ -28,18 +28,23 @@ _SYSTEM = (
 )
 
 _VIDEO_HINTS = re.compile(r"\b(video|tutorial|watch|youtube|walkthrough|course|paso a paso)\b", re.I)
-_DOCS_HINTS = re.compile(r"\b(how|what|why|api|method|function|error|collision|tilemap|sprite|physics|camera|scene|animation|phaser|pixi|excalibur|kaplay|godot|pygame|monogame|libgdx|ebiten|bevy|raylib|node|entity|ecs|c[oó]mo|qu[eé])\b", re.I)
+# Generic technical vocabulary only — subject-specific words come from the
+# DomainProfile's docs_keywords, so the router works for ANY subject.
+_DOCS_HINTS = re.compile(r"\b(how|what|why|api|method|function|error|class|node|install|config|c[oó]mo|qu[eé])\b", re.I)
 
 
-def heuristic_route(question: str) -> str:
+def heuristic_route(question: str, keywords: tuple[str, ...] = ()) -> str:
     if _VIDEO_HINTS.search(question):
         return "video"
     if _DOCS_HINTS.search(question):
         return "docs"
+    q = question.lower()
+    if any(k.lower() in q for k in keywords):
+        return "docs"
     return "chat"
 
 
-def route(llm: LLM, question: str) -> str:
+def route(llm: LLM, question: str, keywords: tuple[str, ...] = ()) -> str:
     raw = llm.complete(_SYSTEM, question).lower()
     for label in LABELS:
         if label in raw.split() or raw.strip() == label:
@@ -48,4 +53,4 @@ def route(llm: LLM, question: str) -> str:
     for label in LABELS:
         if label in raw:
             return label
-    return heuristic_route(question)
+    return heuristic_route(question, keywords)
